@@ -1,0 +1,18 @@
+axi_gpio_0:
+- axi_gpio
+- gpio
+axi_timer_0:
+- axi_timer
+- tmrctr
+axi_uartlite_0:
+- axi_uartlite
+- uartlite
+hygro_i2c_0:
+- hygro_i2c
+- None
+lcd_wrapper_0:
+- lcd_wrapper
+- None
+microblaze_0_axi_intc:
+- axi_intc
+- intc
