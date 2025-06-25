@@ -35,6 +35,8 @@ void EnableCaches();
 void DisableCaches();
 
 int main() {
+
+   EnableCaches();
    //Hygro function calls
    DemoInitializeHygro();
    //CLP function calls
@@ -46,12 +48,13 @@ int main() {
    //Cleanup
    DemoCleanupHygro();
    DemoCleanupCLP();
+
+   DisableCaches();   
    
    return 0;
 }
 
 void DemoInitializeHygro() {
-   EnableCaches();
    xil_printf("HYGRO Init Started\n\r");
    HYGRO_begin(
       &myDeviceHygro,
@@ -115,7 +118,6 @@ void DemoRunCombined() {
 }
 
 void DemoCleanupHygro() {
-   DisableCaches();
 }
 
 void DemoCleanupCLP() {

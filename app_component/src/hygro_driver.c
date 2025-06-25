@@ -28,14 +28,14 @@ void HYGRO_begin(PmodHYGRO *InstancePtr, u32 IIC_Address, u8 Chip_Address,
 void HYGRO_TimerInit(XTmrCtr *TimerInstancePtr, XTmrCtr_Config *TimerConfigPtr) {
    XTmrCtr_CfgInitialize(TimerInstancePtr, TimerConfigPtr, TimerConfigPtr->BaseAddress);
    XTmrCtr_InitHw(TimerInstancePtr);
-   XTmrCtr_Initialize(TimerInstancePtr, TimerConfigPtr->BaseAddress);
+   //XTmrCtr_Initialize(TimerInstancePtr, TimerConfigPtr->BaseAddress);
    XTmrCtr_SetResetValue(TimerInstancePtr, 0, 0);
 }
 
 int HYGRO_IPInit(PmodHYGRO *InstancePtr) {
    
-   // Start the IP core
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_GCSR, HYGRO_GCSR_AP_START);
+   // not sure why i put this here lol
+   //Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_GCSR, HYGRO_GCSR_AP_START);
    
    // Clear any pending interrupts
    Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_IPISR, 0x01);

@@ -25,13 +25,17 @@ void CLP_end(PmodCLP *InstancePtr) {
 
 int CLP_IPInit(PmodCLP *InstancePtr) {
    // Enable global interrupts if needed
-   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_GIER, 0x01);
-   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_IPIER, 0x01);
+   //commented out, bc we are currently just using polling
+   //Xil_Out32(InstancePtr->BaseAddress + CLP_IP_GIER, 0x01);
+   //Xil_Out32(InstancePtr->BaseAddress + CLP_IP_IPIER, 0x01);
    
    return XST_SUCCESS;
 }
 
 void CLP_StartOperation(PmodCLP *InstancePtr) {
+    //clear any previous ap_done
+    Xil_In32(InstancePtr->BaseAddress + CLP_IP_GCSR);
+    
    Xil_Out32(InstancePtr->BaseAddress + CLP_IP_GCSR, CLP_GCSR_AP_START);
 }
 
@@ -54,8 +58,8 @@ u8 CLP_WriteStringAtPos(PmodCLP *InstancePtr, uint8_t idxRow, uint8_t idxCol, ch
    
    if (bResult == CLP_LCDS_ERR_SUCCESS) {
       uint8_t len = strlen(strLn);
-      if (len > 39) {
-         len = 39;
+      if (len > 40) {
+         len = 40;
       }
       
       uint8_t lenToPrint = len + idxCol;
@@ -80,7 +84,7 @@ void CLP_SetWriteDdramPosition(PmodCLP *InstancePtr, u8 bAdr) {
    CLP_WaitUntilNotBusy(InstancePtr);
    
    // Set the address in LCD_DATA register
-   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_DATA, bAdr);
+   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_DATA, bAdr | 0x80);  //is 0x80 needed here?
    
    // Trigger set address command
    CLP_WriteCommand(InstancePtr, CLP_LCD_SET_ADDR);
