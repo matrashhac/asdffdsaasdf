@@ -4,10 +4,19 @@
 void CLP_begin(PmodCLP *InstancePtr, u32 BaseAddress) {
    InstancePtr->BaseAddress = BaseAddress;
    CLP_IPInit(InstancePtr);
+   usleep(30000);
+   
    CLP_FunctionSet(InstancePtr);
+   usleep(40);
+   
    CLP_WriteCommand(InstancePtr, CLP_LCD_DISPLAY); // Display on
+   usleep(40);
+   
    CLP_DisplayClear(InstancePtr);
+   usleep(1640);
+   
    CLP_WriteCommand(InstancePtr, CLP_LCD_ENTRY_MODE_DIR); // Increment mode
+   usleep(40);
 }
 
 void CLP_end(PmodCLP *InstancePtr) {
@@ -93,9 +102,9 @@ void CLP_FunctionSet(PmodCLP *InstancePtr) {
 }
 
 void CLP_WriteCommand(PmodCLP *InstancePtr, u32 cmd_bits) {
-   //CLP_StartOperation(InstancePtr);
+   CLP_StartOperation(InstancePtr);
    Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_CMD, cmd_bits);
-   //CLP_WaitForDone(InstancePtr);
+   CLP_WaitForDone(InstancePtr);
 }
 
 void CLP_WriteDataByte(PmodCLP *InstancePtr, u8 byte) {
@@ -112,6 +121,7 @@ void CLP_WaitUntilNotBusy(PmodCLP *InstancePtr) {
    u8 bStatus;
    do {
       bStatus = CLP_ReadStatus(InstancePtr);
+      usleep(10);
    } while (bStatus & CLP_LCD_BUSY);
 }
 
