@@ -42,9 +42,15 @@
 #define HYGRO_TX_START  0x100
 #define HYGRO_TX_STOP   0x200
 
-// SR register bits
-#define HYGRO_SR_TX_FIFO_EMPTY  0x80
-#define HYGRO_SR_RX_FIFO_EMPTY  0x40
+// SR register bits (corrected based on documentation)
+#define HYGRO_SR_ABGC           0x01  // Addressed By General Call
+#define HYGRO_SR_AAS            0x02  // Addressed as Slave
+#define HYGRO_SR_BUS_BUSY       0x04  // Bus Busy
+#define HYGRO_SR_SRW            0x08  // Slave Read/Write
+#define HYGRO_SR_TX_FIFO_FULL   0x10  // TX FIFO Full
+#define HYGRO_SR_RX_FIFO_FULL   0x20  // RX FIFO Full
+#define HYGRO_SR_RX_FIFO_EMPTY  0x40  // RX FIFO Empty
+#define HYGRO_SR_TX_FIFO_EMPTY  0x80  // TX FIFO Empty
 
 typedef struct PmodHYGRO {
    u32 BaseAddress;
@@ -54,6 +60,7 @@ typedef struct PmodHYGRO {
    u8 currentRegister;
 } PmodHYGRO;
 
+// Public API functions
 void HYGRO_begin(PmodHYGRO *InstancePtr, u32 IIC_Address, u8 Chip_Address,
       u32 TMR_Address, u32 TMR_SysClockFreqHz);
 void HYGRO_TimerInit(XTmrCtr *TMRInstancePtr, XTmrCtr_Config *TMRConfigPtr);
@@ -68,10 +75,9 @@ float HYGRO_getHumidity(PmodHYGRO *InstancePtr);
 float HYGRO_tempF2C(float tempF);
 float HYGRO_tempC2F(float tempC);
 
-// Internal functions
-void HYGRO_WaitForDone(PmodHYGRO *InstancePtr);
-void HYGRO_StartOperation(PmodHYGRO *InstancePtr);
-void HYGRO_SendByte(PmodHYGRO *InstancePtr, u8 data, u8 start, u8 stop);
-u8 HYGRO_ReceiveByte(PmodHYGRO *InstancePtr, u8 stop);
+// Internal helper functions
+void HYGRO_WaitForTxFifoEmpty(PmodHYGRO *InstancePtr);
+void HYGRO_WaitForRxFifoNotEmpty(PmodHYGRO *InstancePtr);
+int HYGRO_WaitForBusIdle(PmodHYGRO *InstancePtr);
 
 #endif // PMODHYGRO_H

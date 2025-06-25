@@ -33,14 +33,15 @@ void HYGRO_TimerInit(XTmrCtr *TimerInstancePtr, XTmrCtr_Config *TimerConfigPtr) 
 }
 
 int HYGRO_IPInit(PmodHYGRO *InstancePtr) {
-   // Set slave address (7-bit address shifted left by 1)
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_ADR, (InstancePtr->chipAddr << 1) & 0xFE);
    
-   // Enable global interrupts if needed
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_GIER, 0x01);
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_IPIER, 0x01);
+   // Start the IP core
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_GCSR, HYGRO_GCSR_AP_START);
+   
+   // Clear any pending interrupts
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_IPISR, 0x01);
    
    return XST_SUCCESS;
+}
 }
 
 void HYGRO_DelayMillis(PmodHYGRO *InstancePtr, u32 millis) {
@@ -52,89 +53,101 @@ void HYGRO_DelayMillis(PmodHYGRO *InstancePtr, u32 millis) {
    XTmrCtr_Stop(TimerInstancePtr, 0);
 }
 
-void HYGRO_WaitForDone(PmodHYGRO *InstancePtr) {
+void HYGRO_WaitForTxFifoEmpty(PmodHYGRO *InstancePtr) {
    u32 status;
    do {
-      status = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_GCSR);
-   } while (!(status & HYGRO_GCSR_AP_DONE));
+      status = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_SR);
+   } while (!(status & HYGRO_SR_TX_FIFO_EMPTY));
 }
 
-void HYGRO_StartOperation(PmodHYGRO *InstancePtr) {
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_GCSR, HYGRO_GCSR_AP_START);
-}
-
-void HYGRO_SendByte(PmodHYGRO *InstancePtr, u8 data, u8 start, u8 stop) {
-   u32 tx_data = data;
-   if (start) tx_data |= HYGRO_TX_START;
-   if (stop) tx_data |= HYGRO_TX_STOP;
-   
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
-}
-
-u8 HYGRO_ReceiveByte(PmodHYGRO *InstancePtr, u8 stop) {
-   u32 rx_data;
+void HYGRO_WaitForRxFifoNotEmpty(PmodHYGRO *InstancePtr) {
    u32 status;
-   
-   // Send read command with number of bytes to receive
-   u32 tx_data = 1; // Read 1 byte
-   if (stop) tx_data |= HYGRO_TX_STOP;
-   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
-   
-   // Wait for data to be available
    do {
       status = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_SR);
    } while (status & HYGRO_SR_RX_FIFO_EMPTY);
+}
+
+int HYGRO_WaitForBusIdle(PmodHYGRO *InstancePtr) {
+   u32 status;
+   int timeout = 1000; // Prevent infinite loop
    
-   rx_data = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_RX_FIFO);
-   return (u8)(rx_data & 0xFF);
+   do {
+      status = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_SR);
+      timeout--;
+      if (timeout <= 0) return XST_FAILURE;
+   } while (status & HYGRO_SR_BUS_BUSY);
+   
+   return XST_SUCCESS;
 }
 
 void HYGRO_ReadIIC(PmodHYGRO *InstancePtr, u8 reg, u8 *Data, int nData,
       u32 conversion_delay_ms) {
    int i;
    
-   HYGRO_StartOperation(InstancePtr);
-   
-   if (InstancePtr->currentRegister != reg) {
-      // Send register address
-      HYGRO_SendByte(InstancePtr, InstancePtr->chipAddr << 1, 1, 0); // Start, write mode
-      HYGRO_SendByte(InstancePtr, reg, 0, 0);
-      InstancePtr->currentRegister = reg;
+   if (HYGRO_WaitForBusIdle(InstancePtr) != XST_SUCCESS) {
+      return;
    }
    
-   if (conversion_delay_ms > 0)
+   // Step 1: Send device address + write bit + register address
+   u32 tx_data = ((InstancePtr->chipAddr << 1) & 0xFE) | HYGRO_TX_START;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
+   
+   // Send register address
+   tx_data = reg;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
+   
+   // Wait for transmission
+   HYGRO_WaitForTxFifoEmpty(InstancePtr);
+   
+   // Conversion delay if needed
+   if (conversion_delay_ms > 0) {
       HYGRO_DelayMillis(InstancePtr, conversion_delay_ms);
-   
-   // Send read command
-   HYGRO_SendByte(InstancePtr, (InstancePtr->chipAddr << 1) | 0x01, 1, 0); // Start, read mode
-   
-   // Read data bytes
-   for (i = 0; i < nData; i++) {
-      Data[i] = HYGRO_ReceiveByte(InstancePtr, (i == nData - 1) ? 1 : 0);
    }
    
-   HYGRO_WaitForDone(InstancePtr);
+   // Step 2: Repeated start with device address + read bit
+   tx_data = ((InstancePtr->chipAddr << 1) | 0x01) | HYGRO_TX_START;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
+   
+   // Send number of bytes to read with stop bit
+   tx_data = nData | HYGRO_TX_STOP;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
+   
+   // Step 3: Read data from RX_FIFO
+   for (i = 0; i < nData; i++) {
+      HYGRO_WaitForRxFifoNotEmpty(InstancePtr);
+      u32 rx_data = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_RX_FIFO);
+      Data[i] = (u8)(rx_data & 0xFF);
+   }
+   
+   InstancePtr->currentRegister = reg;
 }
 
 void HYGRO_WriteIIC(PmodHYGRO *InstancePtr, u8 reg, u8 *Data, int nData) {
    int i;
    
-   HYGRO_StartOperation(InstancePtr);
+   if (HYGRO_WaitForBusIdle(InstancePtr) != XST_SUCCESS) {
+      return;
+   }
    
-   // Send slave address in write mode
-   HYGRO_SendByte(InstancePtr, InstancePtr->chipAddr << 1, 1, 0); // Start, write mode
+   // Send device address + write bit
+   u32 tx_data = ((InstancePtr->chipAddr << 1) & 0xFE) | HYGRO_TX_START;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
    
    // Send register address
-   HYGRO_SendByte(InstancePtr, reg, 0, 0);
+   tx_data = reg;
+   Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
    
    // Send data bytes
    for (i = 0; i < nData; i++) {
-      HYGRO_SendByte(InstancePtr, Data[i], 0, (i == nData - 1) ? 1 : 0);
+      tx_data = Data[i];
+      if (i == nData - 1) {
+         tx_data |= HYGRO_TX_STOP;  // Stop bit on last byte
+      }
+      Xil_Out32(InstancePtr->BaseAddress + HYGRO_IP_TX_FIFO, tx_data);
    }
    
+   HYGRO_WaitForTxFifoEmpty(InstancePtr);
    InstancePtr->currentRegister = reg;
-   
-   HYGRO_WaitForDone(InstancePtr);
 }
 
 float HYGRO_getTemperature(PmodHYGRO *InstancePtr) {
