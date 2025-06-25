@@ -71,7 +71,7 @@ void CLP_SetWriteDdramPosition(PmodCLP *InstancePtr, u8 bAdr) {
    CLP_WaitUntilNotBusy(InstancePtr);
    
    // Set the address in LCD_DATA register
-   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_DATA, bAdr | 0x80);
+   Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_DATA, bAdr);
    
    // Trigger set address command
    CLP_WriteCommand(InstancePtr, CLP_LCD_SET_ADDR);
@@ -93,9 +93,9 @@ void CLP_FunctionSet(PmodCLP *InstancePtr) {
 }
 
 void CLP_WriteCommand(PmodCLP *InstancePtr, u32 cmd_bits) {
-   CLP_StartOperation(InstancePtr);
+   //CLP_StartOperation(InstancePtr);
    Xil_Out32(InstancePtr->BaseAddress + CLP_IP_LCD_CMD, cmd_bits);
-   CLP_WaitForDone(InstancePtr);
+   //CLP_WaitForDone(InstancePtr);
 }
 
 void CLP_WriteDataByte(PmodCLP *InstancePtr, u8 byte) {
