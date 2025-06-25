@@ -42,7 +42,6 @@ int HYGRO_IPInit(PmodHYGRO *InstancePtr) {
    
    return XST_SUCCESS;
 }
-}
 
 void HYGRO_DelayMillis(PmodHYGRO *InstancePtr, u32 millis) {
    XTmrCtr* TimerInstancePtr = &InstancePtr->HYGROTimer;
@@ -69,12 +68,9 @@ void HYGRO_WaitForRxFifoNotEmpty(PmodHYGRO *InstancePtr) {
 
 int HYGRO_WaitForBusIdle(PmodHYGRO *InstancePtr) {
    u32 status;
-   int timeout = 1000; // Prevent infinite loop
    
    do {
       status = Xil_In32(InstancePtr->BaseAddress + HYGRO_IP_SR);
-      timeout--;
-      if (timeout <= 0) return XST_FAILURE;
    } while (status & HYGRO_SR_BUS_BUSY);
    
    return XST_SUCCESS;
