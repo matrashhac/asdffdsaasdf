@@ -1,3 +1,4 @@
 [
-  "/1work/fpgaproc/driver_for_both_ips/platform/export/platform"
+  "/1work/fpgaproc/driver_for_both_ips/platform/export/platform",
+  "/1work/fpgaproc/driver_for_both_ips/only_i2c/export/only_i2c"
 ]

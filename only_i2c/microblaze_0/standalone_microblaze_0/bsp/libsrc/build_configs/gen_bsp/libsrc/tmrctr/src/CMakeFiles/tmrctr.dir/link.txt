@@ -1,0 +1,2 @@
+mb-ar qc libtmrctr.a CMakeFiles/tmrctr.dir/xtmrctr.c.obj CMakeFiles/tmrctr.dir/xtmrctr_g.c.obj CMakeFiles/tmrctr.dir/xtmrctr_intr.c.obj CMakeFiles/tmrctr.dir/xtmrctr_l.c.obj CMakeFiles/tmrctr.dir/xtmrctr_options.c.obj CMakeFiles/tmrctr.dir/xtmrctr_selftest.c.obj CMakeFiles/tmrctr.dir/xtmrctr_sinit.c.obj CMakeFiles/tmrctr.dir/xtmrctr_stats.c.obj
+/opt/xilinx/Vitis/2023.2/gnu/microblaze/lin/bin/mb-ranlib libtmrctr.a

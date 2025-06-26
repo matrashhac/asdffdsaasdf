@@ -1,7 +1,7 @@
 {
   "name": "app_component",
   "type": "HOST",
-  "platform": "/1work/fpgaproc/driver_for_both_ips/platform/export/platform/platform.xpfm",
+  "platform": "/1work/fpgaproc/driver_for_both_ips/only_i2c/export/only_i2c/only_i2c.xpfm",
   "domain": "standalone_microblaze_0",
   "cpuInstance": "microblaze_0",
   "cpuType": "microblaze",
